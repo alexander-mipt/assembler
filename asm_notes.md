@@ -21,6 +21,53 @@
   * `w` (word) - 2B
   * `l` (long) - 4B
   * `q` (quad) - 8B
+### Группы команд в ассемблере (на примере x86)
+* Основная арифметика (`add`, `adc`, `cmp`)
+* Умножение и деление (`div`, `mul`)
+* Логическая арифметика (`xor`, `test`)
+* Битовые операции (`bsf`, `bsr`, `bt`, `bts`)
+* Инкремент и декремент (`inc`, `dec`)
+* Пересылка данных (`mov`, `cbw`, `bswap`, `nop`)
+* Работа со стеком (`push`, `pop`)
+* Условные команды (`jmp`, `jnz`, )
+* Переходы и процедуры (`jmp`, `call`, `leave`, `enter`)
+* Команды сдвига (`shl`, `sar`, `rol`, `rcr`, `shld`)
+* Цепочечные команды ()
+* Работа с битами
+* Десятичная арифметика
+* Установка флажков
+* Сегментные регистры
+* Специальные команды
+* Системные команды
+* Привилегированные
+* Вызов прерывания
+
+### Команда `mov`
+#### x86_64
+`mov src, dst`
+#### Aarch
+`mov dst src`
+### Команда `lea` - load effective address
+`lea src dst`
+```
+leal 0x32, %eax /* аналогично movl $0x32, %eax */
+leal $0x32, %eax /* вызовет ошибку при компиляции, так как $0x32 не является адресом */
+leal $some_var, %eax /* аналогично, ошибка компиляции */
+leal 4(%esp), %eax /* поместить в %eax адрес предыдущего элемента в стеке; фактически, %eax = %esp + 4 */
+```
+```
+ movl $10, %eax
+ movl $7, %ebx
+ leal 5(%eax) , %ecx /* %ecx = %eax + 5 = 15 */
+ leal -3(%eax) , %ecx /* %ecx = %eax - 3 = 10 */
+ leal (%eax,%ebx) , %ecx /* %ecx = %eax + %ebx × 1 = 17 */
+ leal (%eax,%ebx,2) , %ecx /* %ecx = %eax + %ebx × 2 = 24 */
+ leal 1(%eax,%ebx,2), %ecx /* %ecx = %eax + %ebx × 2 + 1 = 25 */
+ leal (,%eax,8) , %ecx /* %ecx = %eax × 8 = 80 */
+ leal (%eax,%eax,2) , %ecx /* %eax = %eax + %eax × 2 = %eax × 3 = 30 */
+ leal (%eax,%eax,4) , %ecx /* %eax = %eax + %eax × 4 = %eax × 5 = 50 */
+ leal (%eax,%eax,8) , %ecx /* %eax = %eax + %eax × 8 = %eax × 9 = 90 */
+```
 
 ## Символы и метки
 * **Символ** - некоторая константа. Хранится в объектном файле, используется для наименования констант, переменных, функций и т.д. Имеет характеристики:
@@ -44,7 +91,7 @@ hello_str:
 ## Директивы Ассемблера
 Директивы размещают данные в памяти. Их аргументы - список выражений, разделенных запятыми.
 
-## Директивы для работы с символами
+### Директивы для работы с символами
 * `.set` *`symbol`*, *`expression`* - создает новый символ
 * `.globl` *`symbol`* - сделать символ *`symbol`* глобальным
 
@@ -125,3 +172,234 @@ hello_str:
     1. Извлечь из стека адрес возврата (`pop`)
     2. Передать управление команде, расположенной по адресу возврата
     3. `rsp` += *`number`* (optional - need to forget func arguments)
+  * **Интересный вопрос:** какое значение помещает в стек вот эта команда `pushl %esp`
+    Если ещё раз взглянуть на алгоритм работы команды push, кажется очевидным, что в
+    данном случае она должна поместить уже уменьшенное значение %esp. Однако в
+    документации Intel сказано, что в стек помещается такое значение %esp, каким оно
+    было до выполнения команды — и она действительно работает именно так.
+
+
+## [Типы адресации](https://en.wikipedia.org/wiki/Addressing_mode)
+### Addressing modes for code
+#### Absolute or Direct
+The effective address for an absolute instruction address is the address parameter itself with no modifications.
+```
+   +----+------------------------------+
+   |jump|           address            |
+   +----+------------------------------+
+
+   (Effective PC address = address)
+```
+#### PC-relative
+The effective address for a PC-relative instruction address is the offset parameter added to the address of the next instruction. This offset is usually signed to allow reference to code both before and after the instruction.
+```
+   +----+------------------------------+
+   |jump|           offset             |    jump relative
+   +----+------------------------------+
+
+   (Effective PC address = next instruction address + offset, offset may be negative)
+```
+#### Register indirect
+The effective address for a Register indirect instruction is the address in the specified register. For example, (A7) to access the content of address register A7.
+```
+   +-------+-----+
+   |jumpVia| reg |
+   +-------+-----+
+
+   (Effective PC address = contents of register 'reg')
+```
+### Addressing modes for data
+#### Register or Register Direct
+This "addressing mode" does not have an effective address and is not considered to be an addressing mode on some computers.
+```
+   +------+-----+-----+-----+
+   | mul  | reg1| reg2| reg3|      reg1 := reg2 * reg3;
+   +------+-----+-----+-----+
+```
+```
+/* записать в регистр %ecx операнд, который
+находится в регистре %eax */
+movl %eax, %ecx
+```
+
+#### Base + offset, and variations
+```
+   +------+-----+-----+----------------+
+   | load | reg | base|     offset     |  reg := RAM[base + offset]
+   +------+-----+-----+----------------+
+
+   (Effective address = offset + contents of specified base register)
+```
+```
+/* обратиться по адресу %ebx + 4 */
+movl 4(%ebx), %eax
+```
+
+#### Immediate/literal
+```
+   +------+-----+-----+----------------+
+   | add  | reg1| reg2|    constant    |    reg1 := reg2 + constant;
+   +------+-----+-----+----------------+
+```
+```
+/* загрузить константу 0x12345 в регистр %eax.*/
+movl $0x12345, %eax
+
+```
+
+#### Implicit
+The implied addressing mode, also called the implicit addressing mode (x86 assembly language), does not explicitly specify an effective address for either the source or the destination (or sometimes both).
+
+Either the source (if any) or destination effective address (or sometimes both) is implied by the opcode.
+```
+   +-----------------+
+   | clear carry bit |
+   +-----------------+
+
+   +-------------------+
+   | clear Accumulator |
+   +-------------------+
+```
+### Mixed addressing modes (for code or data) 
+#### Absolute / direct
+```
+   +------+-----+--------------------------------------+
+   | load | reg |         address                      |
+   +------+-----+--------------------------------------+
+
+   (Effective address = address as given in instruction)
+```
+```
+/* Записать в регистр %eax операнд, который содержится в
+оперативной памяти по адресу метки num */
+movl (num), %eax
+```
+
+#### Indexed absolute
+```
+   +------+-----+-----+--------------------------------+
+   | load | reg |index|         address                |
+   +------+-----+-----+--------------------------------+
+
+   (Effective address = address + contents of specified index register)
+```
+
+#### Base + index
+```
+   +------+-----+-----+-----+
+   | load | reg | base|index|
+   +------+-----+-----+-----+
+
+   (Effective address = contents of specified base register + contents of specified index register)
+```
+
+#### Base + index + offset
+```
+   +------+-----+-----+-----+----------------+
+   | load | reg | base|index|         offset |
+   +------+-----+-----+-----+----------------+
+
+   (Effective address = offset + contents of specified base register + contents of specified index register)
+```
+
+#### Scaled
+```
+   +------+-----+-----+-----+
+   | load | reg | base|index|
+   +------+-----+-----+-----+
+
+   (Effective address = contents of specified base register + scaled contents of specified index register)
+```
+
+#### Register indirect
+```
+   +------+------+-----+
+   | load | reg1 | base|
+   +------+------+-----+
+ 
+   (Effective address = contents of base register)
+```
+```
+/* записать в регистр %eax операнд из оперативной памяти, адрес
+которого находится в регистре адреса %ebx */
+movl (%ebx), %eax
+```
+#### Memory indirect
+Any of the addressing modes mentioned in this article could have an extra bit to indicate indirect addressing, i.e. the address calculated using some mode is in fact the address of a location (typically a complete word) which contains the actual effective address.
+
+#### PC-relative
+The PC-relative addressing mode can be used to load a register with a value stored in program memory a short distance away from the current instruction. It can be seen as a special case of the "base plus offset" addressing mode, one that selects the program counter (PC) as the "base register".
+```
+   +------+------+---------+----------------+
+   | load | reg1 | base=PC |     offset     |
+   +------+------+---------+----------------+
+
+   reg1 := RAM[PC + offset]
+   (Effective address = PC + offset)
+```
+### Autoincrement / decerement addressing modes
+#### Register autoincrement indirect (for code or data)
+```
+   +------+-----+-------+
+   | load | reg | base  |
+   +------+-----+-------+
+
+   (Effective address = contents of base register)
+```
+
+#### Register autodecrement indirect (for code or data)
+```
+   +------+-----+-----+
+   | load | reg | base|
+   +------+-----+-----+
+
+   (Effective address = new contents of base register)
+```
+### Sequential addressing modes
+#### Sequential execution
+```
+   +------+
+   | nop  |              execute the following instruction
+   +------+
+
+   (Effective PC address = next instruction address)
+```
+#### Conditional execution
+Some computer architectures have conditional instructions (such as ARM, but no longer for all instructions in 64-bit mode) or conditional load instructions (such as x86) which can in some cases make conditional branches unnecessary and avoid flushing the instruction pipeline. An instruction such as a 'compare' is used to set a condition code, and subsequent instructions include a test on that condition code to see whether they are obeyed or ignored.
+
+#### Skip
+```
+   +------+-----+-----+
+   |skipEQ| reg1| reg2|      skip the next instruction if reg1=reg2
+   +------+-----+-----+
+
+   (Effective PC address = next instruction address + 1)
+```
+## Команды сравнения, условный и безусловный переходы (conditional / unconditional branch)
+### Команды сравнения
+#### x86_64
+`cmp op2, op1` - выполняет вычитание `op1` - `op2` и устанавливает флаги
+`test op1, op2` - выполняет побитовое И на операндами, не изменяя их, а только выставляя флаги
+### Условный переход
+Порядок дейтвий: арифметика --> выставление флагов --> анализ флагов и сам переход \
+Обычно пара [cmp+jmp], или [test+jmp], или специальная инструкция \
+`jxx label` - условный переход, где xx - обозначает мнемонику операции:
+* `e` - equal (==)
+* `n` - not (~)
+* `g` - greater (signed >)
+* `l` - less (signed <)
+* `a` - above (unsigned >)
+* `b` - below (unsigned <)
+```
+cmpl $15, %eax /* сравнение */
+jne not_equal: /* если операнды не равны, перейти на метку not_equal */
+```
+
+### Безусловный переход (uncoditional branch)
+`jmp addr` - передаёт управление на адрес, не проверяя никаких условий. Адрес может быть задан в виде непосредственного значения (метки), регистра или обращения к памяти.
+
+
+
+
+
+

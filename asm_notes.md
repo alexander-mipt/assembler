@@ -1,3 +1,7 @@
+## Ccылки
+* [Народный справочник по инструкциям x86](http://looch-disasm.narod.ru/refe01.htm)
+* [Архитектура Aarch64](https://developer.arm.com/architectures/learn-the-architecture/a-profile)
+* [Анализ кода с помощью ассемблера](https://ru.wikibooks.org/wiki/%D0%90%D1%81%D1%81%D0%B5%D0%BC%D0%B1%D0%BB%D0%B5%D1%80_%D0%B2_Linux_%D0%B4%D0%BB%D1%8F_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%81%D1%82%D0%BE%D0%B2_C#%D0%A1%D1%82%D0%B5%D0%BA)
 ## [Little-endian / Big-endian](https://en.wikipedia.org/wiki/Endianness)
 * **Endianness** - the order or sequence of bytes of a word of digital data in computer memory.
   Endianness is primarily expressed as big-endian (BE) or little-endian (LE).
@@ -7,8 +11,8 @@
 
 ## Структура команд Ассемблера
 * **Инструкция** - набор чисел, представляющий собой закодированную функцию процессора. В ее состав входит операция и операнды.
-* **Операция** - определяет вид инструкции (сложение, запись в память и т.д.)
-* **Операнды** - аргументы операции
+* **Операция (opcode)** - определяет вид инструкции (сложение, запись в память и т.д.)
+* **Операнды (operands)** - аргументы операции
   * От 0 до 3-х
   * **Непосредственный операнд**
     * **Числовая константа**
@@ -32,20 +36,46 @@
 * Условные команды (`jmp`, `jnz`, )
 * Переходы и процедуры (`jmp`, `call`, `leave`, `enter`)
 * Команды сдвига (`shl`, `sar`, `rol`, `rcr`, `shld`)
-* Цепочечные команды ()
-* Работа с битами
-* Десятичная арифметика
-* Установка флажков
-* Сегментные регистры
-* Специальные команды
-* Системные команды
-* Привилегированные
-* Вызов прерывания
+* Цепочечные команды (`movs`, `cmps`, `stos`, `lods`, `ins`)
+* Десятичная арифметика (`daa`, `das`, `aaa`)
+* Установка флагов (`clc`, `stc`, `cli`)
+* Команды для работы с сегментными регистрами (`lds`, `lfs`, `lss`)
+* Специальные команды (`lea`, `xlat`, `bound`, `cmpxchg`)
+* Системные команды (`out`, `lsl`, `lock`)
+* Привилегированные (`ltr`, `lldt`, `lar`)
+* Вызов прерывания (`int`)
+
+### Команды цикла
+* `loop label` - `do {} while(--ecx)`: 
+  1. ecx -= 1
+  2. ecx == 0 --> перейти на метку `label`; ecx != 0 --> перейти на метку после инструкции `loop`
+
+### Команды сравнения, условный и безусловный переходы (conditional / unconditional branch)
+#### Команды сравнения
+##### x86_64
+`cmp op2, op1` - выполняет вычитание `op1` - `op2` и устанавливает флаги
+`test op1, op2` - выполняет побитовое И на операндами, не изменяя их, а только выставляя флаги
+#### Условный переход
+Порядок дейтвий: арифметика --> выставление флагов --> анализ флагов и сам переход \
+Обычно пара [cmp+jmp], или [test+jmp], или специальная инструкция \
+`jxx label` - условный переход, где xx - обозначает мнемонику операции:
+* `e` - equal (==)
+* `n` - not (~)
+* `g` - greater (signed >)
+* `l` - less (signed <)
+* `a` - above (unsigned >)
+* `b` - below (unsigned <)
+```
+cmpl $15, %eax /* сравнение */
+jne not_equal: /* если операнды не равны, перейти на метку not_equal */
+```
+#### Безусловный переход (uncoditional branch)
+`jmp addr` - передаёт управление на адрес, не проверяя никаких условий. Адрес может быть задан в виде непосредственного значения (метки), регистра или обращения к памяти.
 
 ### Команда `mov`
 #### x86_64
 `mov src, dst`
-#### Aarch
+#### Aarch64
 `mov dst src`
 ### Команда `lea` - load effective address
 `lea src dst`
@@ -88,7 +118,7 @@ hello_str:
  .string "Hello, world!\n"
 ```
 
-## Директивы Ассемблера
+## Директивы ассемблера
 Директивы размещают данные в памяти. Их аргументы - список выражений, разделенных запятыми.
 
 ### Директивы для работы с символами
@@ -97,8 +127,8 @@ hello_str:
 
 ### Директивы для размещения числовых констант
 * `.byte` - размещают каждое выражение как 1B
-* `.short` - 2B
-*  `.long` - 4B
+* `.short`, `.hword`  - 2B
+*  `.long`, `.word` - 4B
 *  `.quad` - 8B
 ```
 .byte 0x10, 0xf5, 0x42, 0x55
@@ -375,28 +405,16 @@ Some computer architectures have conditional instructions (such as ARM, but no l
 
    (Effective PC address = next instruction address + 1)
 ```
-## Команды сравнения, условный и безусловный переходы (conditional / unconditional branch)
-### Команды сравнения
-#### x86_64
-`cmp op2, op1` - выполняет вычитание `op1` - `op2` и устанавливает флаги
-`test op1, op2` - выполняет побитовое И на операндами, не изменяя их, а только выставляя флаги
-### Условный переход
-Порядок дейтвий: арифметика --> выставление флагов --> анализ флагов и сам переход \
-Обычно пара [cmp+jmp], или [test+jmp], или специальная инструкция \
-`jxx label` - условный переход, где xx - обозначает мнемонику операции:
-* `e` - equal (==)
-* `n` - not (~)
-* `g` - greater (signed >)
-* `l` - less (signed <)
-* `a` - above (unsigned >)
-* `b` - below (unsigned <)
-```
-cmpl $15, %eax /* сравнение */
-jne not_equal: /* если операнды не равны, перейти на метку not_equal */
-```
 
-### Безусловный переход (uncoditional branch)
-`jmp addr` - передаёт управление на адрес, не проверяя никаких условий. Адрес может быть задан в виде непосредственного значения (метки), регистра или обращения к памяти.
+## Caller / callee convention
+Перед вызовом функции (подпрограммы) необходимо сохранить ее аргументы:
+* при помощи регистров
+* при помощи общей области памяти (глобальные переменные)
+* **при помощи стека**
+Также необходимо сохранить контекст программы. \
+[Context](https://en.wikipedia.org/wiki/Context_(computing)) - the minimal set of data used by a task (which may be a process, thread, or fiber) that must be saved to allow a task to be interrupted, and later continued from the same point. The context data may be located in processor registers, memory used by the task, or in control registers used by some operating systems to manage the task. The storage memory (files used by a task) is not concerned by the "task context" in the case of a context switch, even if this can be stored for some uses (checkpointing).
+
+## Типичные ассемблерные структуры / оптимизации / трюки
 
 
 

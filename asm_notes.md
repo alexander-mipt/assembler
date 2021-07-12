@@ -117,9 +117,6 @@ leal 4(%esp), %eax /* поместить в %eax адрес предыдущег
 hello_str:
  .string "Hello, world!\n"
 ```
-## Константы
-* `$0x01` - константа
-* 0x01 - обращение по адресу
 
 ## Директивы ассемблера
 Директивы размещают данные в памяти. Их аргументы - список выражений, разделенных запятыми.
@@ -410,12 +407,29 @@ Some computer architectures have conditional instructions (such as ARM, but no l
 ```
 
 ## Caller / callee convention
-Перед вызовом функции (подпрограммы) необходимо сохранить ее аргументы:
-* при помощи регистров
-* при помощи общей области памяти (глобальные переменные)
-* **при помощи стека**
-Также необходимо сохранить контекст программы. \
-[Context](https://en.wikipedia.org/wiki/Context_(computing)) - the minimal set of data used by a task (which may be a process, thread, or fiber) that must be saved to allow a task to be interrupted, and later continued from the same point. The context data may be located in processor registers, memory used by the task, or in control registers used by some operating systems to manage the task. The storage memory (files used by a task) is not concerned by the "task context" in the case of a context switch, even if this can be stored for some uses (checkpointing).
+* Перед вызовом функции (подпрограммы) необходимо сохранить ее аргументы:
+  * при помощи регистров
+  * при помощи общей области памяти (глобальные переменные)
+  * **при помощи стека (распространенный вариант)** \
+* Необходимо сохранить контекст программы. \
+  [Context](https://en.wikipedia.org/wiki/Context_(computing)) - the minimal set of data used by a task (which may be a process,   thread, or fiber) that must be saved to allow a task to be interrupted, and later continued from the same point. The context     data may be located in processor registers, memory used by the task, or in control registers used by some operating systems to   manage the task. The storage memory (files used by a task) is not concerned by the "task context" in the case of a context       switch, even if this can be stored for some uses (checkpointing). \
+  Т.е. как минимум нужно позаботиться о сохранении и восстановлении значений некоторых регистров. Так, подпрограмма (функция) обязана сохранять и восстанавливать при возврате:
+    * регистр`ebp`
+    * регистр `ebx`
+    * регистр `esi`
+    * регистр `edi`
+    * регистр `esp`
+    * перед вызовом функции флаг `df` := 0
+* Может потребоваться выровнять стек (увеличить или уменьшеть содержимое регистра `esp`).
+* Если функция возвращает значение, его принято записывать в `eax`
+* При работе с ситемным вызовом:
+  * `eax` - номер системного вызова
+  * `ebx` - первый аргумент
+  * `ecx` - второй
+  * `edx` - третий
+  * `esi` - четвертый
+  * `edi` - пятый
+  * `ebp` - шестой
 
 ## Типичные ассемблерные структуры / оптимизации / трюки
 

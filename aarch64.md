@@ -146,3 +146,12 @@ LDP Q1, Q3, [X5], #256 =
   X5 += 256 (+= 32 byte = 2*Q)
   equivalent of loading pair of registers in continuous mem segment
 ```
+
+# Program flow
+## unconditional
+```
+B <label> - PC-relative, direct, [-128MB; +128MB]
+BR <Xn> - jump to addr in reg Xn
+```
+## conditional
+

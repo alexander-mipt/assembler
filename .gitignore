@@ -1,0 +1,4 @@
+c_linker/external_static_gvars/*.o
+c_linker/external_static_gvars/*.so
+c_linker/external_static_gvars/main
+
